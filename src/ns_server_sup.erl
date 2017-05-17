@@ -24,6 +24,8 @@
 -export([node_name_changed/0,
          start_link/0]).
 
+-export([pre_end/2]).
+
 %% Supervisor callbacks
 -export([init/1]).
 
@@ -48,6 +50,12 @@ start_link() ->
 
 init([]) ->
     pre_start(),
+    case application:get_env(pidfile) of
+        {ok, PidFile} ->
+            proc_lib:start_link(?MODULE, pre_end, [self(), PidFile]);
+        _ ->
+            ok
+    end,
     {ok, {{one_for_one,
            misc:get_env_default(max_r, 3),
            misc:get_env_default(max_t, 10)},
@@ -56,6 +64,17 @@ init([]) ->
 pre_start() ->
     misc:make_pidfile(),
     misc:ping_jointo().
+
+pre_end(Parent, PidFile) ->
+    process_flag(trap_exit, true),
+    proc_lib:init_ack(Parent, ok),
+    receive
+        {'EXIT', Pid, _Reason} ->
+            misc:delete_pidfile(PidFile);
+        _ ->
+            ok
+    end,
+    ok.
 
 child_specs() ->
     [{ns_disksup, {ns_disksup, start_link, []},

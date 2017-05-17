@@ -269,6 +269,9 @@ make_pidfile(PidFile) ->
     ok = misc:write_file(PidFile, list_to_binary(Pid ++ "\n")),
     ok.
 
+delete_pidfile(PidFile) ->
+    ok = file:delete(PidFile).
+
 ping_jointo() ->
     case application:get_env(jointo) of
         {ok, NodeName} -> ping_jointo(NodeName);
